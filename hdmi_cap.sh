@@ -4,7 +4,7 @@ export GST_DEBUG=*:3
 
 rm *.ts
 # add -f for foreground
-busybox httpd -p 127.0.0.1:8080
+busybox httpd -p 0.0.0.0:8080
 gst-launch-1.0 \
 	v4l2src \
 		device=/dev/video2 \
