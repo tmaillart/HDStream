@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export GST_DEBUG=*:3
+
 gst-launch-1.0 \
 	v4l2src \
 		device=/dev/video2 \
@@ -7,12 +9,18 @@ gst-launch-1.0 \
 	! jpegdec \
 	! x264enc \
 		tune=zerolatency \
-	! h264parse \
-	! hlssink2 \
+	! queue \
+	! mpegtsmux \
+		name=mux \
+	! hlssink \
 		max-files=5 \
 	alsasrc \
 		device=hw:1,0 \
 	! audio/x-raw,format=S16LE,channels=2,rate=48000 \
+	! lamemp3enc \
+	! mpegaudioparse \
+	! queue \
+	! mux.
 
 exit
 	! xvimagesink \
