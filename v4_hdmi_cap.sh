@@ -16,7 +16,7 @@ gst-launch-1.0 \
 	! jpegdec \
 	! videoconvert \
 	! v4l2h264enc \
-	! 'video/x-h264,profile=constrained-baseline,level=(string)4' \
+	! 'video/x-h264,profile=constrained-baseline,level=(string)3.1' \
 	! h264parse \
 	! queue \
 	! mpegtsmux \
