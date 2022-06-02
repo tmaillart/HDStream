@@ -2,17 +2,37 @@
 
 export GST_DEBUG=*:3,v4l2src:1
 
-gst-rtsp-launch "( \
+#V4L2_DEV='/dev/video0'
+#PULSE_DEV='alsa_input.usb-MACROSILICON_USB3._0_capture-02.iec958-stereo'
+if [ -z "$PULSE_DEV" ] || ! pactl get-source-volume "$PULSE_DEV" >/dev/null 2>/dev/null;then
+	pactl list short sources
+	printf '\nselect: '
+	read PULSE_DEV
+fi
+
+if [ -z "$V4L2_DEV" ];then
+	ls -1 /dev/video*
+	read V4L2_DEV
+fi
+
+gst-rtsp-launch -a 0.0.0.0 "( \
         mpegtsmux \
 		name=mux \
 	! rtpmp2tpay \
 		name=pay0 \
-        v4l2src \
+	v4l2src \
+		device=$V4L2_DEV \
+	! image/jpeg,width=1280,height=720,framerate=20/1 \
+	! jpegdec \
 	! videoconvert \
 	! x264enc \
+		tune=zerolatency \
+		speed-preset=3 \
+	! capsfilter caps=video/x-h264,profile=constrained-baseline,level=(string)3.1 \
 	! queue \
 	! mux. \
-        audiotestsrc \
+        pulsesrc \
+		device=$PULSE_DEV \
 	! lamemp3enc \
 	! mpegaudioparse \
 	! queue \
