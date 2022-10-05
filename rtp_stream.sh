@@ -22,13 +22,13 @@ gst-rtsp-launch -a 0.0.0.0 "( \
 		name=pay0 \
 	v4l2src \
 		device=$V4L2_DEV \
-	! image/jpeg,width=1280,height=720,framerate=20/1 \
+	! image/jpeg,width=1280,height=720,framerate=60/1 \
 	! jpegdec \
 	! videoconvert \
-	! x264enc \
+	! x265enc \
 		tune=zerolatency \
-		speed-preset=3 \
-	! capsfilter caps=video/x-h264,profile=constrained-baseline,level=(string)3.1 \
+	! capsfilter caps=video/x-h265 \
+	! h265parse \
 	! queue \
 	! mux. \
         pulsesrc \
