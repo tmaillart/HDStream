@@ -6,7 +6,7 @@ AUDIO_DEV=alsa_input.usb-MACROSILICON_USB_Video-02.iec958-stereo
 GST_DEBUG=*:3 gst-launch-1.0 -e -v \
 	v4l2src \
 		"device=$VIDEO_DEV" \
-	! image/jpeg,width=1280,height=720,framerate=20/1 \
+	! image/jpeg,width=1280,height=720,framerate=60/1 \
 	! jpegdec \
 	! videoconvert \
 	! tee \
