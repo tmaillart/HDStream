@@ -16,25 +16,17 @@ if [ -z "$V4L2_DEV" ];then
 fi
 
 gst-rtsp-launch -a 0.0.0.0 "( \
-        mpegtsmux \
-		name=mux \
-	! rtpmp2tpay \
-		name=pay0 \
 	v4l2src \
+		io-mode=2 \
 		device=$V4L2_DEV \
 	! image/jpeg,width=1280,height=720,framerate=60/1 \
-	! jpegdec \
-	! videoconvert \
-	! x265enc \
-		tune=zerolatency \
-	! capsfilter caps=video/x-h265 \
-	! h265parse \
-	! queue \
-	! mux. \
+	! rtpjpegpay \
+		name=pay0 \
         pulsesrc \
 		device=$PULSE_DEV \
+	! audio/x-raw,format=S16LE,rate=44100 \
 	! lamemp3enc \
 	! mpegaudioparse \
-	! queue \
-	! mux. )"
+	! rtpmpapay \
+		name=pay1 )"
 
