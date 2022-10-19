@@ -3,7 +3,7 @@
 export GST_DEBUG=*:3,v4l2src:1
 
 #V4L2_DEV='/dev/video0'
-#ALSA_DEV='alsa_input.usb-MACROSILICON_USB3._0_capture-02.iec958-stereo'
+#ALSA_DEV='hw:4,0'
 if [ -z "$ALSA_DEV" ] || ! [ -e "/dev/snd/$(echo "$ALSA_DEV" | sed 's/hw:/pcmC/ ; s/,/D/')c" ] ;then
 	cat /proc/asound/cards
 	printf '\nselect: '
