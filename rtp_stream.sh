@@ -19,7 +19,13 @@ gst-rtsp-launch -a 0.0.0.0 "( \
 	v4l2src \
 		device=$V4L2_DEV \
 	! image/jpeg,width=1280,height=720,framerate=60/1 \
-	! rtpjpegpay \
+	! jpegdec \
+	! videoconvert \
+	! x265enc \
+		tune=zerolatency \
+	! capsfilter caps=video/x-h265 \
+	! h265parse \
+	! rtph265pay \
 		name=pay0 \
         alsasrc \
 		device=$ALSA_DEV \
