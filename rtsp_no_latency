@@ -1,0 +1,110 @@
+#!/bin/bash
+
+cat <<'EOF'
+usage:
+	server side -> ./rtsp_no_latency
+	client side -> ./rtsp_no_latency 127.0.0.1 video0
+EOF
+
+PORT=8554
+if ! [ -z "$1" ]; then
+	IP=${1:-127.0.0.1}
+	DEV=${2:-video0}
+	exec gst-launch-1.0 \
+		rtspsrc \
+			name=s \
+			location=rtsp://$IP:$PORT/$DEV \
+			latency=0 \
+			buffer-mode=auto \
+		s. ! \
+		decodebin ! \
+		autovideosink \
+		s. ! \
+		decodebin \
+		! audioconvert \
+		! autoaudiosink
+fi
+
+# requires mediamtx from https://github.com/bluenviron/mediamtx
+if ! which mediamtx; then
+	echo 'install mediamtx ? (Y/n)'
+	read choice
+	if [ "$choice" -eq n ]; then
+		exit 1
+	fi
+	set -e
+	FILE=mediamtx_v1.1.1_linux_amd64.tar.gz
+	cd /tmp
+	wget https://github.com/bluenviron/mediamtx/releases/download/v1.1.1/$FILE
+	tar xvf $FILE && rm $FILE
+	sudo mv mediamtx /usr/local/bin
+	sudo mkdir -p /etc/mediamtx
+	sudo mv mediamtx.yml /etc/mediamtx
+	rm LICENSE
+	cd -
+fi
+
+trap "pkill -P $$" EXIT
+
+video=()
+audio=()
+
+i=0
+for dev in /dev/video*;do
+	if ! v4l2-ctl -D -d $dev | grep -A1 'Device Caps' | grep Video >/dev/null; then
+		continue
+	fi
+	# suppose it's always device 0
+	snd_dev=$(find /sys/$(udevadm info -n $dev -q path)/../../.. -name 'pcmC*D*c' -type d -printf "%f\n" | grep -Po 'C\K([0-9]+)')
+	video+=( $dev )
+	audio+=( $snd_dev )
+	i=$((i+1))
+done
+
+/usr/local/bin/mediamtx &
+
+for (( j=0; j<i; j++ ));do
+	audio_pipeline=""
+	audio_dev=${audio[$j]}
+	if ! [ -z "$audio_dev" ];then
+		CARD="\"$audio_dev\""
+		PULSE_DEV=$(pactl list sources | grep -e '^\S' -e '^\s*alsa\.card = ' -e Name: | grep -B1 "alsa\.card = $CARD")
+		if [ -z "$PULSE_DEV" ]; then
+			echo "use alsa -> $audio_dev"
+			asrc="alsasrc \
+			device=hw:$audio_dev,0"
+		else
+			audio_dev=$(echo "$PULSE_DEV" | grep -o -m1 '\S*$')
+			echo "use pulse -> $audio_dev"
+			asrc="pulsesrc \
+			device=$audio_dev"
+		fi
+		audio_pipeline="$asrc \
+			do-timestamp=true \
+		! audio/x-raw,format=S16LE,rate=48000,channels=2 \
+		! opusenc \
+		! s.sink_1"
+	fi
+
+	echo "A:$audio_dev V:${video[$j]}" >&2
+
+	GST_DEBUG=*:1 gst-launch-1.0 -q --no-position \
+		rtspclientsink \
+			name=s \
+			latency=200 \
+			location=rtsp://127.0.0.1:$PORT/video$j \
+		v4l2src \
+			device=${video[$j]} \
+		! \
+			image/jpeg,width=1280,height=720,framerate=60/1 \
+		! \
+			jpegdec \
+		! \
+			videoconvert \
+		! \
+			x264enc \
+				tune=zerolatency \
+		! s.sink_0 \
+		$audio_pipeline &
+done
+wait
