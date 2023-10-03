@@ -63,6 +63,10 @@ done
 
 /usr/local/bin/mediamtx &
 
+if ! [ -z "$WEB" ]; then
+	ENC_PARAM='key-int-max=5'
+fi
+
 for (( j=0; j<i; j++ ));do
 	audio_pipeline=""
 	audio_dev=${audio[$j]}
@@ -104,6 +108,9 @@ for (( j=0; j<i; j++ ));do
 		! \
 			x264enc \
 				tune=zerolatency \
+				$ENC_PARAM \
+		! \
+			video/x-h264,framerate=60/1 \
 		! s.sink_0 \
 		$audio_pipeline &
 done
